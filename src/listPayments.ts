@@ -19,11 +19,11 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             });
         }
 
-        const { currency } = result.data;
+        const { currency, limit, skip } = result.data;
 
-        const payments = await listPayments({ currency });
+        const { items, total } = await listPayments({ currency, limit, skip });
 
-        return buildResponse(200, { data: payments });
+        return buildResponse(200, { data: items, total, limit, skip });
     } catch (error) {
         console.error('Error listing payments:', error);
         return buildResponse(500, {

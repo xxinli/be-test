@@ -16,6 +16,20 @@ export type PaymentInput = z.infer<typeof PaymentInputSchema>;
 
 export const ListPaymentsQuerySchema = z.object({
     currency: CurrencySchema.optional(),
+    limit: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : 20))
+        .refine((val) => val >= 1 && val <= 100, {
+            message: 'Limit must be between 1 and 100',
+        }),
+    skip: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : 0))
+        .refine((val) => val >= 0, {
+            message: 'Skip must be 0 or greater',
+        }),
 });
 
 export type ListPaymentsQuery = z.infer<typeof ListPaymentsQuerySchema>;

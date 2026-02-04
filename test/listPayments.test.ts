@@ -4,46 +4,164 @@ import { handler } from '../src/listPayments';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 
 describe('When the user lists payments', () => {
-    it('Returns all payments when no filter is provided', async () => {
+    it('Returns all payments with default pagination when no filter is provided', async () => {
         const mockPayments = [
             { id: randomUUID(), amount: 1000, currency: 'USD' },
             { id: randomUUID(), amount: 2000, currency: 'AUD' },
         ];
-        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce(mockPayments);
+        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 2,
+        });
 
         const result = await handler({
             queryStringParameters: null,
         } as unknown as APIGatewayProxyEvent);
 
         expect(result.statusCode).toBe(200);
-        expect(JSON.parse(result.body)).toEqual({ data: mockPayments });
-        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: undefined });
+        expect(JSON.parse(result.body)).toEqual({
+            data: mockPayments,
+            total: 2,
+            limit: 20,
+            skip: 0,
+        });
+        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: undefined, limit: 20, skip: 0 });
     });
 
     it('Returns filtered payments when currency filter is provided', async () => {
-        const mockPayments = [
-            { id: randomUUID(), amount: 1000, currency: 'USD' },
-        ];
-        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce(mockPayments);
+        const mockPayments = [{ id: randomUUID(), amount: 1000, currency: 'USD' }];
+        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 1,
+        });
 
         const result = await handler({
             queryStringParameters: { currency: 'USD' },
         } as unknown as APIGatewayProxyEvent);
 
         expect(result.statusCode).toBe(200);
-        expect(JSON.parse(result.body)).toEqual({ data: mockPayments });
-        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: 'USD' });
+        expect(JSON.parse(result.body)).toEqual({
+            data: mockPayments,
+            total: 1,
+            limit: 20,
+            skip: 0,
+        });
+        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: 'USD', limit: 20, skip: 0 });
     });
 
     it('Returns empty array when no payments exist', async () => {
-        jest.spyOn(payments, 'listPayments').mockResolvedValueOnce([]);
+        jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: [],
+            total: 0,
+        });
 
         const result = await handler({
             queryStringParameters: null,
         } as unknown as APIGatewayProxyEvent);
 
         expect(result.statusCode).toBe(200);
-        expect(JSON.parse(result.body)).toEqual({ data: [] });
+        expect(JSON.parse(result.body)).toEqual({
+            data: [],
+            total: 0,
+            limit: 20,
+            skip: 0,
+        });
+    });
+
+    it('Respects custom limit parameter', async () => {
+        const mockPayments = [{ id: randomUUID(), amount: 1000, currency: 'USD' }];
+        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 50,
+        });
+
+        const result = await handler({
+            queryStringParameters: { limit: '10' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body)).toEqual({
+            data: mockPayments,
+            total: 50,
+            limit: 10,
+            skip: 0,
+        });
+        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: undefined, limit: 10, skip: 0 });
+    });
+
+    it('Respects custom skip parameter', async () => {
+        const mockPayments = [{ id: randomUUID(), amount: 2000, currency: 'AUD' }];
+        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 50,
+        });
+
+        const result = await handler({
+            queryStringParameters: { skip: '10' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body)).toEqual({
+            data: mockPayments,
+            total: 50,
+            limit: 20,
+            skip: 10,
+        });
+        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: undefined, limit: 20, skip: 10 });
+    });
+
+    it('Respects both limit and skip parameters', async () => {
+        const mockPayments = [{ id: randomUUID(), amount: 3000, currency: 'SGD' }];
+        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 100,
+        });
+
+        const result = await handler({
+            queryStringParameters: { limit: '5', skip: '20' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body)).toEqual({
+            data: mockPayments,
+            total: 100,
+            limit: 5,
+            skip: 20,
+        });
+        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: undefined, limit: 5, skip: 20 });
+    });
+
+    it('Returns 400 when limit is less than 1', async () => {
+        const result = await handler({
+            queryStringParameters: { limit: '0' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        const body = JSON.parse(result.body);
+        expect(body.error).toBe('Bad Request');
+        expect(body.message).toBe('Invalid query parameters');
+    });
+
+    it('Returns 400 when limit is greater than 100', async () => {
+        const result = await handler({
+            queryStringParameters: { limit: '101' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        const body = JSON.parse(result.body);
+        expect(body.error).toBe('Bad Request');
+        expect(body.message).toBe('Invalid query parameters');
+    });
+
+    it('Returns 400 when skip is negative', async () => {
+        const result = await handler({
+            queryStringParameters: { skip: '-1' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        const body = JSON.parse(result.body);
+        expect(body.error).toBe('Bad Request');
+        expect(body.message).toBe('Invalid query parameters');
     });
 
     it('Returns 400 when currency format is invalid', async () => {
@@ -91,6 +209,7 @@ describe('When the user lists payments', () => {
         expect(body.message).toBe('An unexpected error occurred while listing payments');
     });
 });
+
 
 afterEach(() => {
     jest.resetAllMocks();

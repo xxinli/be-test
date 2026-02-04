@@ -5,8 +5,8 @@ export const buildResponse = (statusCode: number, body: Object): APIGatewayProxy
         statusCode,
         body: JSON.stringify(body),
         headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Credentials': true,
+            'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
+            'Access-Control-Allow-Credentials': 'true',
         },
     };
 };

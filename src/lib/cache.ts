@@ -1,4 +1,5 @@
 const DEFAULT_TTL_MS = 60000; // 1 minute TTL
+const MAX_CACHE_SIZE = 10;
 
 interface CacheEntry<T> {
     value: T;
@@ -6,6 +7,13 @@ interface CacheEntry<T> {
 }
 
 const cache = new Map<string, CacheEntry<unknown>>();
+
+const evictOldestIfNeeded = (): void => {
+    if (cache.size >= MAX_CACHE_SIZE) {
+        const oldestKey = cache.keys().next().value;
+        if (oldestKey) cache.delete(oldestKey);
+    }
+};
 
 export const getCache = <T>(key: string): T | undefined => {
     const entry = cache.get(key) as CacheEntry<T> | undefined;
@@ -23,6 +31,7 @@ export const getCache = <T>(key: string): T | undefined => {
 };
 
 export const setCache = <T>(key: string, value: T): void => {
+    evictOldestIfNeeded();
     cache.set(key, { value, timestamp: Date.now() });
 };
 

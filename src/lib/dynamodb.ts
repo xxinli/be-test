@@ -12,7 +12,7 @@ const testConfig = {
         accessKeyId: process.env.AWS_ACCESS_KEY || 'fake_key',
         secretAccessKey: process.env.AWS_SECRET_KEY || 'secret_key',
     },
-    endpoint: 'http://localhost:8000',
+    endpoint: process.env.DYNAMODB_ENDPOINT || 'http://localhost:8000',
     region: process.env.AWS_REGION || 'local',
     sslEnabled: false,
 };

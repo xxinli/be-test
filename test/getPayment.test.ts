@@ -1,4 +1,5 @@
 import * as payments from '../src/lib/payments';
+import * as cache from '../src/lib/cache';
 import { randomUUID } from 'crypto';
 import { handler } from '../src/getPayment';
 import { APIGatewayProxyEvent } from 'aws-lambda';
@@ -84,8 +85,110 @@ describe('When the user requests the records for a specific payment', () => {
             message: 'An unexpected error occurred while retrieving the payment',
         });
     });
+
+    it('Returns 400 when pathParameters is null', async () => {
+        const result = await handler({
+            pathParameters: null,
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        expect(JSON.parse(result.body)).toEqual({
+            error: 'Bad Request',
+            message: 'Payment ID is required',
+        });
+    });
+
+    it('Returns payment from cache on cache hit', async () => {
+        const paymentId = randomUUID();
+        const mockPayment = {
+            id: paymentId,
+            currency: 'USD',
+            amount: 5000,
+        };
+
+        const getCacheMock = jest.spyOn(cache, 'getCache').mockReturnValueOnce(mockPayment);
+        const getPaymentMock = jest.spyOn(payments, 'getPayment').mockResolvedValueOnce(mockPayment);
+
+        const result = await handler({
+            pathParameters: {
+                id: paymentId,
+            },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body)).toEqual(mockPayment);
+        expect(getCacheMock).toHaveBeenCalledWith(`payment:${paymentId}`);
+        expect(getPaymentMock).not.toHaveBeenCalled();
+    });
+
+    it('Stores payment in cache on cache miss', async () => {
+        const paymentId = randomUUID();
+        const mockPayment = {
+            id: paymentId,
+            currency: 'GBP',
+            amount: 3000,
+        };
+
+        jest.spyOn(cache, 'getCache').mockReturnValueOnce(undefined);
+        jest.spyOn(payments, 'getPayment').mockResolvedValueOnce(mockPayment);
+        const setCacheMock = jest.spyOn(cache, 'setCache');
+
+        const result = await handler({
+            pathParameters: {
+                id: paymentId,
+            },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(setCacheMock).toHaveBeenCalledWith(`payment:${paymentId}`, mockPayment);
+    });
+
+    it('Returns 404 and caches null when payment not found', async () => {
+        const paymentId = randomUUID();
+        jest.spyOn(cache, 'getCache').mockReturnValueOnce(undefined);
+        jest.spyOn(payments, 'getPayment').mockResolvedValueOnce(null);
+        const setCacheMock = jest.spyOn(cache, 'setCache');
+
+        const result = await handler({
+            pathParameters: {
+                id: paymentId,
+            },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(404);
+        expect(setCacheMock).toHaveBeenCalledWith(`payment:${paymentId}`, null);
+    });
+
+    it('Returns 400 for empty string payment ID', async () => {
+        const result = await handler({
+            pathParameters: {
+                id: '',
+            },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        expect(JSON.parse(result.body)).toEqual({
+            error: 'Bad Request',
+            message: 'Payment ID is required',
+        });
+    });
+
+    it('Returns 400 for whitespace-only payment ID', async () => {
+        const result = await handler({
+            pathParameters: {
+                id: '   ',
+            },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        expect(JSON.parse(result.body)).toEqual({
+            error: 'Bad Request',
+            message: 'Payment ID must be a valid UUID format',
+        });
+    });
 });
 
 afterEach(() => {
     jest.resetAllMocks();
+    cache.clearCache();
 });

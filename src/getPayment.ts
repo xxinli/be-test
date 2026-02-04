@@ -1,7 +1,27 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { buildResponse } from './lib/apigateway';
-import { getPayment } from './lib/payments';
+import { getCache, setCache } from './lib/cache';
+import { getPayment, Payment } from './lib/payments';
 import { isValidUUID } from './lib/validation';
+
+const CACHE_KEY_PREFIX = 'payment:';
+
+const getCachedPayment = async (paymentId: string): Promise<Payment | null> => {
+    const cacheKey = `${CACHE_KEY_PREFIX}${paymentId}`;
+    const cached = getCache<Payment | null>(cacheKey);
+
+    if (cached !== undefined) {
+        console.info(`Cache hit for payment: ${paymentId}`);
+        return cached;
+    }
+
+    console.info(`Cache miss for payment: ${paymentId}`);
+    const payment = await getPayment(paymentId);
+
+    setCache(cacheKey, payment);
+
+    return payment;
+};
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
@@ -23,7 +43,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             });
         }
 
-        const payment = await getPayment(paymentId);
+        const payment = await getCachedPayment(paymentId);
 
         if (!payment) {
             console.warn(`Payment not found: ${paymentId}`);

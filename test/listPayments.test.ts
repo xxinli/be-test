@@ -208,6 +208,141 @@ describe('When the user lists payments', () => {
         expect(body.error).toBe('Internal Server Error');
         expect(body.message).toBe('An unexpected error occurred while listing payments');
     });
+
+    it('Returns 200 with limit at minimum boundary (1)', async () => {
+        const mockPayments = [{ id: randomUUID(), amount: 1000, currency: 'USD' }];
+        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 100,
+        });
+
+        const result = await handler({
+            queryStringParameters: { limit: '1' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body).limit).toBe(1);
+        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: undefined, limit: 1, skip: 0 });
+    });
+
+    it('Returns 200 with limit at maximum boundary (100)', async () => {
+        const mockPayments = [{ id: randomUUID(), amount: 1000, currency: 'USD' }];
+        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 200,
+        });
+
+        const result = await handler({
+            queryStringParameters: { limit: '100' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body).limit).toBe(100);
+        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: undefined, limit: 100, skip: 0 });
+    });
+
+    it('Returns 400 when limit is non-numeric string', async () => {
+        const result = await handler({
+            queryStringParameters: { limit: 'abc' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        const body = JSON.parse(result.body);
+        expect(body.error).toBe('Bad Request');
+    });
+
+    it('Returns 400 when skip is non-numeric string', async () => {
+        const result = await handler({
+            queryStringParameters: { skip: 'abc' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        const body = JSON.parse(result.body);
+        expect(body.error).toBe('Bad Request');
+    });
+
+    it('Returns filtered payments with pagination combined', async () => {
+        const mockPayments = [{ id: randomUUID(), amount: 1000, currency: 'EUR' }];
+        const listPaymentsMock = jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 50,
+        });
+
+        const result = await handler({
+            queryStringParameters: { currency: 'EUR', limit: '10', skip: '5' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body)).toEqual({
+            data: mockPayments,
+            total: 50,
+            limit: 10,
+            skip: 5,
+        });
+        expect(listPaymentsMock).toHaveBeenCalledWith({ currency: 'EUR', limit: 10, skip: 5 });
+    });
+
+    it('Returns 400 when currency is too long', async () => {
+        const result = await handler({
+            queryStringParameters: { currency: 'USDD' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        const body = JSON.parse(result.body);
+        expect(body.error).toBe('Bad Request');
+    });
+
+    it('Returns empty data when skip exceeds total', async () => {
+        jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: [],
+            total: 10,
+        });
+
+        const result = await handler({
+            queryStringParameters: { skip: '100' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        const body = JSON.parse(result.body);
+        expect(body.data).toEqual([]);
+        expect(body.total).toBe(10);
+        expect(body.skip).toBe(100);
+    });
+
+    it('Returns 200 with skip explicitly set to 0', async () => {
+        const mockPayments = [{ id: randomUUID(), amount: 1000, currency: 'USD' }];
+        jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 1,
+        });
+
+        const result = await handler({
+            queryStringParameters: { skip: '0' },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body).skip).toBe(0);
+    });
+
+    it('Handles queryStringParameters as empty object', async () => {
+        const mockPayments = [{ id: randomUUID(), amount: 1000, currency: 'USD' }];
+        jest.spyOn(payments, 'listPayments').mockResolvedValueOnce({
+            items: mockPayments,
+            total: 1,
+        });
+
+        const result = await handler({
+            queryStringParameters: {},
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body)).toEqual({
+            data: mockPayments,
+            total: 1,
+            limit: 20,
+            skip: 0,
+        });
+    });
 });
 
 

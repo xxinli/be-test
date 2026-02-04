@@ -24,6 +24,66 @@ describe('When the user requests the records for a specific payment', () => {
 
         expect(getPaymentMock).toHaveBeenCalledWith(paymentId);
     });
+
+    it('Returns 400 when payment ID is missing', async () => {
+        const result = await handler({
+            pathParameters: {},
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        expect(JSON.parse(result.body)).toEqual({
+            error: 'Bad Request',
+            message: 'Payment ID is required',
+        });
+    });
+
+    it('Returns 400 when payment ID is not a valid UUID', async () => {
+        const result = await handler({
+            pathParameters: {
+                id: 'invalid-uuid',
+            },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(400);
+        expect(JSON.parse(result.body)).toEqual({
+            error: 'Bad Request',
+            message: 'Payment ID must be a valid UUID format',
+        });
+    });
+
+    it('Returns 404 when payment is not found', async () => {
+        const paymentId = randomUUID();
+        jest.spyOn(payments, 'getPayment').mockResolvedValueOnce(null);
+
+        const result = await handler({
+            pathParameters: {
+                id: paymentId,
+            },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(404);
+        expect(JSON.parse(result.body)).toEqual({
+            error: 'Not Found',
+            message: `Payment with ID '${paymentId}' not found`,
+        });
+    });
+
+    it('Returns 500 when an unexpected error occurs', async () => {
+        const paymentId = randomUUID();
+        jest.spyOn(payments, 'getPayment').mockRejectedValueOnce(new Error('Database connection failed'));
+
+        const result = await handler({
+            pathParameters: {
+                id: paymentId,
+            },
+        } as unknown as APIGatewayProxyEvent);
+
+        expect(result.statusCode).toBe(500);
+        expect(JSON.parse(result.body)).toEqual({
+            error: 'Internal Server Error',
+            message: 'An unexpected error occurred while retrieving the payment',
+        });
+    });
 });
 
 afterEach(() => {

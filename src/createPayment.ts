@@ -12,9 +12,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         if (!result.success) {
             const validationErrors = formatZodErrors(result.error);
-            console.warn('Payment validation failed:', validationErrors);
-            return buildResponse(422, {
-                error: 'Unprocessable Entity',
+            console.warn('Payment input validation failed:', validationErrors);
+            return buildResponse(400, {
+                error: 'Incorrect format data',
                 message: 'Validation failed',
                 details: validationErrors,
             });

@@ -26,34 +26,34 @@ describe('When the user creates a payment', () => {
         );
     });
 
-    it('Returns 422 when amount is missing', async () => {
+    it('Returns 400 when amount is missing', async () => {
         const result = await handler({
             body: JSON.stringify({
                 currency: 'USD',
             }),
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
         expect(body.message).toBe('Validation failed');
         expect(body.details).toBeDefined();
     });
 
-    it('Returns 422 when currency is missing', async () => {
+    it('Returns 400 when currency is missing', async () => {
         const result = await handler({
             body: JSON.stringify({
                 amount: 1000,
             }),
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
         expect(body.message).toBe('Validation failed');
     });
 
-    it('Returns 422 when currency is not a valid 3-letter code', async () => {
+    it('Returns 400 when currency is not a valid 3-letter code', async () => {
         const result = await handler({
             body: JSON.stringify({
                 amount: 1000,
@@ -61,12 +61,12 @@ describe('When the user creates a payment', () => {
             }),
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
     });
 
-    it('Returns 422 when currency is lowercase', async () => {
+    it('Returns 400 when currency is lowercase', async () => {
         const result = await handler({
             body: JSON.stringify({
                 amount: 1000,
@@ -74,12 +74,12 @@ describe('When the user creates a payment', () => {
             }),
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
     });
 
-    it('Returns 422 when amount is negative', async () => {
+    it('Returns 400 when amount is negative', async () => {
         const result = await handler({
             body: JSON.stringify({
                 amount: -100,
@@ -87,12 +87,12 @@ describe('When the user creates a payment', () => {
             }),
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
     });
 
-    it('Returns 422 when amount is not a number', async () => {
+    it('Returns 400 when amount is not a number', async () => {
         const result = await handler({
             body: JSON.stringify({
                 amount: 'invalid',
@@ -100,19 +100,19 @@ describe('When the user creates a payment', () => {
             }),
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
     });
 
-    it('Returns 422 when body is empty', async () => {
+    it('Returns 400 when body is empty', async () => {
         const result = await handler({
             body: '{}',
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
     });
 
     it('Returns 500 when an unexpected error occurs', async () => {
@@ -131,27 +131,27 @@ describe('When the user creates a payment', () => {
         expect(body.message).toBe('An unexpected error occurred while creating the payment');
     });
 
-    it('Returns 422 when body is null', async () => {
+    it('Returns 400 when body is null', async () => {
         const result = await handler({
             body: null,
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
     });
 
-    it('Returns 422 when body is invalid JSON', async () => {
+    it('Returns 400 when body is invalid JSON', async () => {
         const result = await handler({
             body: 'invalid json {',
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
     });
 
-    it('Returns 422 when amount is zero', async () => {
+    it('Returns 400 when amount is zero', async () => {
         const result = await handler({
             body: JSON.stringify({
                 amount: 0,
@@ -159,15 +159,15 @@ describe('When the user creates a payment', () => {
             }),
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
         expect(body.details).toContainEqual(
             expect.objectContaining({ field: 'amount' })
         );
     });
 
-    it('Returns 422 when amount is Infinity', async () => {
+    it('Returns 400 when amount is Infinity', async () => {
         const result = await handler({
             body: JSON.stringify({
                 amount: Infinity,
@@ -175,12 +175,12 @@ describe('When the user creates a payment', () => {
             }),
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
     });
 
-    it('Returns 422 when currency is too long', async () => {
+    it('Returns 400 when currency is too long', async () => {
         const result = await handler({
             body: JSON.stringify({
                 amount: 1000,
@@ -188,9 +188,9 @@ describe('When the user creates a payment', () => {
             }),
         } as unknown as APIGatewayProxyEvent);
 
-        expect(result.statusCode).toBe(422);
+        expect(result.statusCode).toBe(400);
         const body = JSON.parse(result.body);
-        expect(body.error).toBe('Unprocessable Entity');
+        expect(body.error).toBe('Incorrect format data');
     });
 
     it('Returns 201 with decimal amount', async () => {

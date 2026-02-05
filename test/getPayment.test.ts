@@ -117,7 +117,7 @@ describe('When the user requests the records for a specific payment', () => {
 
         expect(result.statusCode).toBe(200);
         expect(JSON.parse(result.body)).toEqual(mockPayment);
-        expect(getCacheMock).toHaveBeenCalledWith(`payment:${paymentId}`);
+        expect(getCacheMock).toHaveBeenCalledWith(`${paymentId}`);
         expect(getPaymentMock).not.toHaveBeenCalled();
     });
 
@@ -140,7 +140,7 @@ describe('When the user requests the records for a specific payment', () => {
         } as unknown as APIGatewayProxyEvent);
 
         expect(result.statusCode).toBe(200);
-        expect(setCacheMock).toHaveBeenCalledWith(`payment:${paymentId}`, mockPayment);
+        expect(setCacheMock).toHaveBeenCalledWith(`${paymentId}`, mockPayment);
     });
 
     it('Returns 404 and caches null when payment not found', async () => {
@@ -156,7 +156,7 @@ describe('When the user requests the records for a specific payment', () => {
         } as unknown as APIGatewayProxyEvent);
 
         expect(result.statusCode).toBe(404);
-        expect(setCacheMock).toHaveBeenCalledWith(`payment:${paymentId}`, null);
+        expect(setCacheMock).toHaveBeenCalledWith(`${paymentId}`, null);
     });
 
     it('Returns 400 for empty string payment ID', async () => {

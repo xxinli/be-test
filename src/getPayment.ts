@@ -4,18 +4,15 @@ import { getCache, setCache } from './lib/cache';
 import { getPayment, Payment } from './lib/payments';
 import { isValidUUID } from './lib/validation';
 
-const CACHE_KEY_PREFIX = 'payment:';
-
 const getCachedPayment = async (paymentId: string): Promise<Payment | null> => {
-    const cacheKey = `${CACHE_KEY_PREFIX}${paymentId}`;
+    const cacheKey = paymentId;
     const cached = getCache<Payment | null>(cacheKey);
 
     if (cached !== undefined) {
-        console.info(`Cache hit for payment: ${paymentId}`);
         return cached;
     }
 
-    console.info(`Cache miss for payment: ${paymentId}`);
+    console.info(`Cache miss for payment: ${cacheKey}`);
     const payment = await getPayment(paymentId);
 
     setCache(cacheKey, payment);
@@ -28,7 +25,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const paymentId = event.pathParameters?.id;
 
         if (!paymentId) {
-            console.error('Missing payment ID in path parameters');
+            console.error('Missing payment ID');
             return buildResponse(400, {
                 error: 'Bad Request',
                 message: 'Payment ID is required'
@@ -36,7 +33,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         }
 
         if (!isValidUUID(paymentId)) {
-            console.warn(`Invalid payment ID format: ${paymentId}`);
+            console.warn(`Invalid payment ID: ${paymentId}`);
             return buildResponse(400, {
                 error: 'Bad Request',
                 message: 'Payment ID must be a valid UUID format'

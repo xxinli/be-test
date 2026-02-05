@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const CurrencySchema = z
     .string({ invalid_type_error: 'Currency must be a string' })
-    .regex(/^[A-Z]{3}$/, 'Currency must be a valid 3-letter ISO currency code (e.g., USD, AUD, SGD)');
+    .regex(/^[A-Z]{3}$/, 'Currency must be a 3-letter ISO currency code (e.g., AUD)');
 
 export const PaymentInputSchema = z.object({
     amount: z
@@ -28,7 +28,7 @@ export const ListPaymentsQuerySchema = z.object({
         .optional()
         .transform((val) => (val ? parseInt(val, 10) : 0))
         .refine((val) => val >= 0, {
-            message: 'Skip must be 0 or greater',
+            message: 'Skip must be a number',
         }),
 });
 

@@ -12,14 +12,40 @@ export const getPayment = async (paymentId: string): Promise<Payment | null> => 
     return (result.Item as Payment) || null;
 };
 
-export const listPayments = async (): Promise<Payment[]> => {
-    const result = await DocumentClient.send(
-        new ScanCommand({
-            TableName: 'Payments',
-        })
-    );
+export interface ListPaymentsOptions {
+    currency?: string;
+    limit?: number;
+    skip?: number;
+}
 
-    return (result.Items as Payment[]) || [];
+export interface PaginatedPayments {
+    items: Payment[];
+    total: number;
+}
+
+export const listPayments = async (options: ListPaymentsOptions = {}): Promise<PaginatedPayments> => {
+    const { currency, limit = 20, skip = 0 } = options;
+
+    const scanParams: {
+        TableName: string;
+        FilterExpression?: string;
+        ExpressionAttributeValues?: Record<string, string>;
+    } = {
+        TableName: 'Payments',
+    };
+
+    if (currency) {
+        scanParams.FilterExpression = 'currency = :currency';
+        scanParams.ExpressionAttributeValues = { ':currency': currency };
+    }
+
+    const result = await DocumentClient.send(new ScanCommand(scanParams));
+
+    const allItems = (result.Items as Payment[]) || [];
+    const total = allItems.length;
+    const items = allItems.slice(skip, skip + limit);
+
+    return { items, total };
 };
 
 export const createPayment = async (payment: Payment) => {
